@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Painel Administrativo{% endblock %}
+
+{% block body_class %}admin-page{% endblock %}
+
+{% block content %}
+<div class="admin-shell">
+    <section class="admin-top">
+        <div>
+            <h1>Painel administrativo</h1>
+            <p>Cadastre as viagens recorrentes da semana. Exemplo: toda segunda sai um barco e uma lancha.</p>
+        </div>
+        <div class="hero-actions">
+            <a class="button button-secondary" href="{{ url_for('index') }}">Ver site publico</a>
+            <a class="button button-primary" href="{{ url_for('logout') }}">Sair</a>
+        </div>
+    </section>
+
+    <div class="admin-grid">
+        <section class="panel">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% for category, message in messages %}
+                    <div class="flash {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endwith %}
+
+            <form method="post" class="stack-form">
+                <div>
+                    <label for="nome">Nome da embarcacao</label>
+                    <input id="nome" type="text" name="nome" required>
+                </div>
+
+                <div class="form-grid">
+                    <div>
+                        <label for="tipo">Tipo</label>
+                        <select id="tipo" name="tipo" required>
+                            <option value="Barco">Barco</option>
+                            <option value="Lancha">Lancha</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="capacidade">Capacidade</label>
+                        <input id="capacidade" type="number" name="capacidade" min="1" required>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div>
+                        <label for="origem">Origem</label>
+                        <input id="origem" type="text" name="origem" required>
+                    </div>
+                    <div>
+                        <label for="destino">Destino</label>
+                        <input id="destino" type="text" name="destino" value="Manaus" required>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div>
+                        <label for="dia_semana">Dia da semana</label>
+                        <select id="dia_semana" name="dia_semana" required>
+                            <option value="0">Segunda</option>
+                            <option value="1">Terca</option>
+                            <option value="2">Quarta</option>
+                            <option value="3">Quinta</option>
+                            <option value="4">Sexta</option>
+                            <option value="5">Sabado</option>
+                            <option value="6">Domingo</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="horario_saida">Horario de saida</label>
+                        <input id="horario_saida" type="time" name="horario_saida" required>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div>
+                        <label for="chegada_dia_offset">Chegada prevista</label>
+                        <select id="chegada_dia_offset" name="chegada_dia_offset" required>
+                            <option value="0">No mesmo dia</option>
+                            <option value="1">No dia seguinte</option>
+                            <option value="2">Dois dias depois</option>
+                            <option value="3">Tres dias depois</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="horario_chegada">Horario de chegada</label>
+                        <input id="horario_chegada" type="time" name="horario_chegada" required>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="telefone_contato">Telefone para contato</label>
+                    <input id="telefone_contato" type="text" name="telefone_contato" placeholder="92999999999" required>
+                </div>
+
+                <div>
+                    <label for="descricao">Descricao da viagem</label>
+                    <textarea id="descricao" name="descricao" placeholder="Informe detalhes da embarcacao, bagagens, atendimento ou observacoes."></textarea>
+                </div>
+
+                <button class="button button-primary full-width" type="submit">Cadastrar embarcacao</button>
+            </form>
+        </section>
+
+        <section class="panel">
+            <div class="section-head">
+                <div>
+                    <h2>Viagens cadastradas</h2>
+                    <span>{{ embarcacoes|length }} viagem(ns) semanal(is)</span>
+                </div>
+            </div>
+
+            <div class="trip-list">
+                {% if embarcacoes %}
+                    {% for embarcacao in embarcacoes %}
+                    <div class="trip-card admin-trip-card no-link">
+                        <div class="trip-top">
+                            <span class="tag">{{ embarcacao.tipo }}</span>
+                            <strong>{{ day_names[embarcacao.dia_semana] }} {{ format_time_br(embarcacao.horario_saida) }}</strong>
+                        </div>
+                        <h3>{{ embarcacao.nome }}</h3>
+                        <p>{{ embarcacao.origem }} -> {{ embarcacao.destino }} | Sai {{ day_names[embarcacao.dia_semana] }} e chega {{ day_names[(embarcacao.dia_semana + embarcacao.chegada_dia_offset) % 7] }}</p>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">Nenhuma viagem semanal cadastrada ainda.</div>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

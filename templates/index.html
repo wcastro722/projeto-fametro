@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}Porto Digital | Calendario Semanal{% endblock %}
+
+{% block body_class %}public-page{% endblock %}
+
+{% block content %}
+<div class="page-shell">
+    <section class="hero simple-hero">
+        <div>
+            <span class="tag">Porto Digital</span>
+            <h1>Agenda semanal</h1>
+            <p>Consulte as saidas da semana e abra a viagem para ver detalhes e contato.</p>
+        </div>
+        <div class="hero-actions">
+            <a class="button button-primary" href="#agenda">Ver calendario</a>
+            <a class="button button-secondary" href="{{ url_for('login') }}">Administrador</a>
+        </div>
+    </section>
+
+    <section class="calendar-layout" id="agenda">
+        <div class="panel calendar-panel">
+            <div class="section-head">
+                <div>
+                    <h2>Calendario da semana</h2>
+                    <span>Escolha a semana e o dia</span>
+                </div>
+                <span>{{ week_range_label }}</span>
+            </div>
+
+            <div class="week-nav">
+                <a class="button button-secondary" href="{{ url_for('index', week=week_offset - 1, dia=days[0].date) }}">Semana anterior</a>
+                <div class="week-current">
+                    <strong>{{ selected_day_label }}</strong>
+                    <span>{% if week_offset == 0 %}Semana atual{% elif week_offset > 0 %}+{{ week_offset }} semana(s){% else %}{{ week_offset }} semana(s){% endif %}</span>
+                </div>
+                <a class="button button-secondary" href="{{ url_for('index', week=week_offset + 1, dia=days[0].date) }}">Proxima semana</a>
+            </div>
+
+            <div class="days-grid">
+                {% for day in days %}
+                <a class="day-card {% if selected_day == day.date %}selected{% endif %}" href="{{ url_for('index', week=week_offset, dia=day.date) }}">
+                    <span>{{ day.label }}</span>
+                    <strong>{{ day.day }}</strong>
+                    <small>{{ day.month }}</small>
+                    <span class="badge">{{ counts.get(day.date, 0) }} viagem(ns)</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="panel trips-panel">
+            <div class="section-head compact-head">
+                <div>
+                    <h3>Viagens do dia</h3>
+                    <span>Abra uma embarcacao para ver os detalhes</span>
+                </div>
+                <span>{{ viagens_do_dia|length }} encontrada(s)</span>
+            </div>
+
+            <div class="trip-list">
+                {% if viagens_do_dia %}
+                    {% for embarcacao in viagens_do_dia %}
+                    {% set phone = embarcacao.telefone_contato|replace(' ', '')|replace('(', '')|replace(')', '')|replace('-', '')|replace('+', '') %}
+                    {% set message = "Ola! Quero informacoes sobre a viagem da embarcacao " ~ embarcacao.nome ~ " do dia " ~ format_date_br(embarcacao.data_saida) ~ "." %}
+                    <button
+                        class="trip-card trip-button"
+                        type="button"
+                        data-nome="{{ embarcacao.nome }}"
+                        data-tipo="{{ embarcacao.tipo }}"
+                        data-descricao="{{ embarcacao.descricao or 'Viagem cadastrada para consulta publica.' }}"
+                        data-saida="{{ weekday_name_from_date(embarcacao.data_saida) }}, {{ format_date_br(embarcacao.data_saida) }} as {{ format_time_br(embarcacao.horario_saida) }}"
+                        data-chegada="{{ weekday_name_from_date(embarcacao.data_chegada) }}, {{ format_date_br(embarcacao.data_chegada) }} as {{ format_time_br(embarcacao.horario_chegada) }}"
+                        data-rota="{{ embarcacao.origem }} -> {{ embarcacao.destino }}"
+                        data-capacidade="{{ embarcacao.capacidade }} passageiros"
+                        data-contato="{{ embarcacao.telefone_contato }}"
+                        data-resumo="Sai {{ embarcacao.saida_label }} e chega {{ embarcacao.chegada_label }}"
+                        data-whatsapp="https://wa.me/{{ phone }}?text={{ message|urlencode }}"
+                    >
+                        <div class="trip-top">
+                            <span class="tag">{{ embarcacao.tipo }}</span>
+                            <strong>{{ format_time_br(embarcacao.horario_saida) }}</strong>
+                        </div>
+                        <h3>{{ embarcacao.nome }}</h3>
+                        <p>{{ embarcacao.origem }} -> {{ embarcacao.destino }}</p>
+                        <div class="trip-times">
+                            <div class="trip-time-item">
+                                <span>Saida</span>
+                                <strong>{{ embarcacao.saida_label }}, {{ format_time_br(embarcacao.horario_saida) }}</strong>
+                            </div>
+                            <div class="trip-time-item">
+                                <span>Chegada</span>
+                                <strong>{{ embarcacao.chegada_label }}, {{ format_time_br(embarcacao.horario_chegada) }}</strong>
+                            </div>
+                        </div>
+                    </button>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        Nenhuma viagem cadastrada para este dia da semana.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    <div class="footer-note">
+        Desenvolvido por @Wenisson 2026
+    </div>
+</div>
+
+<div class="modal-backdrop" id="trip-modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <button class="modal-close" type="button" aria-label="Fechar">x</button>
+        <div class="section-head modal-head">
+            <div>
+                <h2>Card da viagem</h2>
+                <span>Clique em uma embarcacao para ver os detalhes</span>
+            </div>
+        </div>
+
+        <div class="detail-card modal-detail">
+            <span class="tag" id="modal-tipo">Barco</span>
+            <h3 id="modal-title">Selecione uma viagem</h3>
+            <p id="modal-descricao">Selecione um dia com viagens para abrir o card da embarcacao.</p>
+            <div class="trip-summary" id="modal-resumo">Sai no dia selecionado e mostra a previsao de chegada.</div>
+
+            <div class="meta-list">
+                <div class="meta-item">
+                    <span>Saida</span>
+                    <strong id="modal-saida">-</strong>
+                </div>
+                <div class="meta-item">
+                    <span>Chegada prevista</span>
+                    <strong id="modal-chegada">-</strong>
+                </div>
+                <div class="meta-item">
+                    <span>Rota</span>
+                    <strong id="modal-rota">-</strong>
+                </div>
+                <div class="meta-item">
+                    <span>Capacidade</span>
+                    <strong id="modal-capacidade">-</strong>
+                </div>
+                <div class="meta-item">
+                    <span>Contato</span>
+                    <strong id="modal-contato">-</strong>
+                </div>
+            </div>
+
+            <a class="button button-primary full-width" id="modal-whatsapp" href="#" target="_blank" rel="noopener noreferrer">Entrar em contato</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    const modal = document.getElementById("trip-modal");
+    const closeButton = modal.querySelector(".modal-close");
+    const openButtons = document.querySelectorAll(".trip-button");
+    const modalFields = {
+        tipo: document.getElementById("modal-tipo"),
+        nome: document.getElementById("modal-title"),
+        descricao: document.getElementById("modal-descricao"),
+        resumo: document.getElementById("modal-resumo"),
+        saida: document.getElementById("modal-saida"),
+        chegada: document.getElementById("modal-chegada"),
+        rota: document.getElementById("modal-rota"),
+        capacidade: document.getElementById("modal-capacidade"),
+        contato: document.getElementById("modal-contato"),
+        whatsapp: document.getElementById("modal-whatsapp")
+    };
+
+    function openModal(button) {
+        modalFields.tipo.textContent = button.dataset.tipo;
+        modalFields.nome.textContent = button.dataset.nome;
+        modalFields.descricao.textContent = button.dataset.descricao;
+        modalFields.resumo.textContent = button.dataset.resumo;
+        modalFields.saida.textContent = button.dataset.saida;
+        modalFields.chegada.textContent = button.dataset.chegada;
+        modalFields.rota.textContent = button.dataset.rota;
+        modalFields.capacidade.textContent = button.dataset.capacidade;
+        modalFields.contato.textContent = button.dataset.contato;
+        modalFields.whatsapp.href = button.dataset.whatsapp || "#";
+        modal.hidden = false;
+        document.body.classList.add("modal-open");
+    }
+
+    function closeModal() {
+        modal.hidden = true;
+        document.body.classList.remove("modal-open");
+    }
+
+    openButtons.forEach((button) => {
+        button.addEventListener("click", () => openModal(button));
+    });
+
+    closeButton.addEventListener("click", closeModal);
+    modal.addEventListener("click", (event) => {
+        if (event.target === modal) {
+            closeModal();
+        }
+    });
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !modal.hidden) {
+            closeModal();
+        }
+    });
+</script>
+{% endblock %}
